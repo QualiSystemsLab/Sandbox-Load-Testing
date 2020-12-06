@@ -3,3 +3,4 @@ json-results/
 logs/
 __pycache__
 .idea/
+__pycache__/

@@ -84,7 +84,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     # STORE SETUP DATA TO JSON FILE
     current_dir = os.getcwd()
     log_folder_path = os.path.join(current_dir, my_globals.JSON_RESULTS_FOLDER, run_config.blueprint_id)
-    Path(log_folder_path).mkdir(exist_ok=True)  # make folder if it doesn't exist
+    Path(log_folder_path).mkdir(exist_ok=True, parents=True)  # make folder if it doesn't exist
 
     json_file_name = "{}_{}.json".format(time_stamp, run_config.blueprint_id)
     json_file_path = os.path.join(log_folder_path, json_file_name)
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     current_dir = os.getcwd()
     logs_folder_path = os.path.join(current_dir, my_globals.LOGS_FOLDER, run_config.blueprint_id)
-    Path(logs_folder_path).mkdir(exist_ok=True)
+    Path(logs_folder_path).mkdir(exist_ok=True, parents=True)
 
     log_file_name = "{}_{}.log".format(time_stamp, blueprint_name)
     log_file_path = os.path.join(logs_folder_path, log_file_name)

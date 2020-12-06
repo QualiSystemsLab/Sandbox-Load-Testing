@@ -22,7 +22,7 @@ def run_full_flow():
 
     current_dir = os.getcwd()
     logs_folder_path = os.path.join(current_dir, my_globals.LOGS_FOLDER, run_config.blueprint_id)
-    Path(logs_folder_path).mkdir(exist_ok=True)
+    Path(logs_folder_path).mkdir(exist_ok=True, parents=True)
 
     log_name = "{}_{}.log".format(time_stamp, blueprint_name)
     log_file_path = os.path.join(logs_folder_path, log_name)
