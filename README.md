@@ -35,12 +35,16 @@ If missing 'config.json', create the file and add the following:
   }
 }
 
+
+```
+
 - api data is used for connecting to Sandbox Rest Service
 - run config is the settings for the trial
+- If bluerpint has inputs, blueprint params are objects of the form {"name": "value"}
 
-If bluerpint has inputs, blueprint params are objects of the form {"name": "value"}
 ```
 [
     {"param_1": "val_1"},
     {"param_2": "val_2"},
 ]
+```
