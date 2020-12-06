@@ -49,7 +49,8 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     # POLL THE SETUP
     finished_setups = []
     failed_setups = []
-    t_end = time() + (60 * run_config.orch_polling_minutes)
+    total_polling_minutes = run_config.orch_polling_minutes
+    t_end = time() + (60 * total_polling_minutes)
     while time() < t_end:
         for sb_id, sb_data in list(sb_map.items()):
             sb_details = sb_rest.get_sandbox_data(sb_id)
@@ -71,17 +72,22 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
 
         # POLLING DELAY
         sleep(run_config.polling_frequency_seconds)
+    else:
+        # POLLING TIMEOUT
+        exc_msg = "Teardown Polling not completed within {} minutes".format(total_polling_minutes)
+        logger.error(exc_msg)
+        raise Exception(exc_msg)
 
     elapsed = int(default_timer() - start)
     logger.info("Sandboxes Done. Elapsed: '{}' seconds".format(elapsed))
 
     # STORE SETUP DATA TO JSON FILE
     current_dir = os.getcwd()
-    sandbox_dir_path = os.path.join(current_dir, "json-results", run_config.blueprint_id)
-    Path(sandbox_dir_path).mkdir(exist_ok=True)
+    log_folder_path = os.path.join(current_dir, my_globals.JSON_RESULTS_FOLDER, run_config.blueprint_id)
+    Path(log_folder_path).mkdir(exist_ok=True)  # make folder if it doesn't exist
 
     json_file_name = "{}_{}.json".format(time_stamp, run_config.blueprint_id)
-    json_file_path = os.path.join(sandbox_dir_path, json_file_name)
+    json_file_path = os.path.join(log_folder_path, json_file_name)
     with open(json_file_path, 'w') as f:
         sb_data_json = get_json_from_nested_obj(finished_setups)
         f.write(sb_data_json)
@@ -109,8 +115,11 @@ if __name__ == "__main__":
     time_stamp = get_utc_timestamp()
 
     current_dir = os.getcwd()
-    log_name = "{}_{}.log".format(time_stamp, blueprint_name)
-    log_file_path = os.path.join(current_dir, "logs", log_name)
+    logs_folder_path = os.path.join(current_dir, my_globals.LOGS_FOLDER, run_config.blueprint_id)
+    Path(logs_folder_path).mkdir(exist_ok=True)
+
+    log_file_name = "{}_{}.log".format(time_stamp, blueprint_name)
+    log_file_path = os.path.join(logs_folder_path, log_file_name)
     logger = get_logger(log_file_path)
 
     try:

@@ -4,11 +4,12 @@ from collections import OrderedDict, namedtuple
 from datetime import datetime
 from my_globals import TIMESTAMP_FORMATTING
 
-CREDENTIALS_CONFIG_FILE = "config.json"
+CONFIG_FILE_NAME = "config.json"
 
 ApiConfig = namedtuple("ApiConfig", ["host", "port", "user", "password", "domain"])
 RunConfig = namedtuple("RunConfig", ["blueprint_id", "blueprint_params", "sandbox_duration", "sandbox_quantity",
-                                     "orch_polling_minutes", "polling_frequency_seconds", "initial_timeout_minutes"])
+                                     "orch_polling_minutes", "polling_frequency_seconds", "initial_timeout_minutes",
+                                     "teardown_timeout_minutes"])
 
 
 def get_utc_timestamp():
@@ -33,7 +34,9 @@ def get_config_data():
     read json file return tuple of config data objects
     :return:
     """
-    with open(CREDENTIALS_CONFIG_FILE) as config_file:
+    current_dir = os.getcwd()
+    config_full_path = os.path.join(current_dir, CONFIG_FILE_NAME)
+    with open(config_full_path) as config_file:
         data = json.load(config_file)
 
     api_data = data["api_data"]
@@ -54,7 +57,8 @@ def get_config_data():
                            sandbox_quantity=run_data["sandbox_quantity"],
                            orch_polling_minutes=run_data["orch_polling_minutes"],
                            polling_frequency_seconds=run_data["polling_frequency_seconds"],
-                           initial_timeout_minutes=run_data["initial_timeout_minutes"])
+                           initial_timeout_minutes=run_data["initial_timeout_minutes"],
+                           teardown_timeout_minutes=run_data["teardown_timeout_minutes"])
     return api_config, run_config
 
 

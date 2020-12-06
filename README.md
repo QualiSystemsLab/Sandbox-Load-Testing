@@ -13,7 +13,7 @@ The flow can be run all-in-one, or setup and teardown triggered independently to
 - Trigger run_sandboxes.py, stop_sandboxes.py, or run_full_flow.py
 -  stop_sandboxes.py, if triggered as entry point, will look for latest json log file to pull in target sandbox ids
 
-If missing 'config.json', create the file and add the following:
+Create 'config.json' in root of directory and add the following:
 
 ```
 {

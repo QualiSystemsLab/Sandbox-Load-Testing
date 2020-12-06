@@ -1,5 +1,4 @@
 from sb_rest.sandbox_rest_api import SandboxRest
-from sb_rest.common import get_utc_iso_8601_timestamp
 from timeit import default_timer
 from time import time, sleep
 import json
@@ -10,44 +9,32 @@ import os
 from datetime import datetime
 
 
-def get_latest_json_log_path(blueprint_id):
+def _get_latest_log_path(blueprint_id, root_folder, file_type="log"):
     """
-    find latest dated log in blueprint json results folder
-    sample results file name - 05-12-20_221829_<blueprint_name>.json
+    find latest dated log in results folder
+    sample results file name - <time_stamp>_<blueprint_name>.<filetype>
     :param str blueprint_id: refers to folder inside json-results
     :return:
     """
     current_dir = os.getcwd()
-    sandbox_dir_path = os.path.join(current_dir, my_globals.JSON_RESULTS_FOLDER, blueprint_id)
-    json_files = os.listdir(sandbox_dir_path)
-    time_stamp_strings = ["_".join(x.split("_")[:-1]) for x in json_files]
+    log_folder_path = os.path.join(current_dir, root_folder, blueprint_id)
+    log_files = os.listdir(log_folder_path)
+    time_stamp_strings = ["_".join(x.split("_")[:-1]) for x in log_files]
     datetime_time_stamps = [datetime.strptime(ts, my_globals.TIMESTAMP_FORMATTING) for ts in time_stamp_strings]
     datetime_time_stamps.sort()
     latest_timestamp = datetime_time_stamps.pop()
     latest_timestamp_str = datetime.strftime(latest_timestamp, my_globals.TIMESTAMP_FORMATTING)
-    json_file_name = "{}_{}.json".format(latest_timestamp_str, blueprint_id)
-    json_full_path = os.path.join(sandbox_dir_path, json_file_name)
-    return json_full_path
+    log_file_name = "{}_{}.{}".format(latest_timestamp_str, blueprint_id, file_type)
+    log_file_path = os.path.join(log_folder_path, log_file_name)
+    return log_file_path
 
 
 def get_latest_log_path(blueprint_id):
-    """
-    find latest dated log file in logs folder
-    sample file name - 05-12-20_221829_<blueprint_name>.log
-    :param str blueprint_id: refers to folder inside json-results
-    :return:
-    """
-    current_dir = os.getcwd()
-    log_dir_path = os.path.join(current_dir, my_globals.LOGS_FOLDER)
-    file_names = os.listdir(log_dir_path)
-    time_stamp_strings = ["_".join(x.split("_")[:-1]) for x in file_names]
-    datetime_time_stamps = [datetime.strptime(ts, my_globals.TIMESTAMP_FORMATTING) for ts in time_stamp_strings]
-    datetime_time_stamps.sort()
-    latest_timestamp = datetime_time_stamps.pop()
-    latest_timestamp_str = datetime.strftime(latest_timestamp, my_globals.TIMESTAMP_FORMATTING)
-    log_file_name = "{}_{}.log".format(latest_timestamp_str, blueprint_id)
-    log_file_full_path = os.path.join(log_dir_path, log_file_name)
-    return log_file_full_path
+    return _get_latest_log_path(blueprint_id, my_globals.LOGS_FOLDER)
+
+
+def get_latest_json_log_path(blueprint_id):
+    return _get_latest_log_path(blueprint_id, my_globals.JSON_RESULTS_FOLDER, "json")
 
 
 def _get_sandbox_data_from_json(path):
@@ -62,7 +49,6 @@ def _get_sandbox_data_from_json(path):
 
 def stop_sandboxes(sb_rest, run_config, logger):
     """
-
     :param SandboxRest sb_rest:
     :param RunConfig run_config:
     :param logging.Logger logger:
@@ -93,7 +79,8 @@ def stop_sandboxes(sb_rest, run_config, logger):
     # POLL TEARDOWN
     finished_teardowns = []
     failed_teardowns = []
-    t_end = time() + (60 * run_config.orch_polling_minutes)
+    total_polling_minutes = run_config.orch_polling_minutes
+    t_end = time() + (60 * total_polling_minutes)
     while time() < t_end:
         for curr_sb_id in list(sb_map.keys()):
             sb_data = sb_map[curr_sb_id]
@@ -102,6 +89,7 @@ def stop_sandboxes(sb_rest, run_config, logger):
             if state == my_globals.SANDBOX_ENDED_STATE:
                 setup_errors = sb_data.setup_errors
                 if setup_errors:
+                    # can search activity feed either by latest event id or "since" current timestamp
                     sorted_errors = sorted(setup_errors, key=lambda x: x["id"])
                     last_setup_error_id = sorted_errors.pop()["id"]
                     # curr_ts = get_utc_iso_8601_timestamp()
@@ -119,8 +107,14 @@ def stop_sandboxes(sb_rest, run_config, logger):
                 del sb_map[curr_sb_id]
         if not sb_map:
             break
+
         # POLLING DELAY
         sleep(run_config.polling_frequency_seconds)
+    else:
+        # POLLING TIMEOUT
+        exc_msg = "Teardown Polling not completed within {} minutes".format(total_polling_minutes)
+        logger.error(exc_msg)
+        raise Exception(exc_msg)
 
     elapsed = int(default_timer() - start)
     logger.info("Sandboxes Done Tearing Down. Elapsed: '{}' seconds".format(elapsed))
