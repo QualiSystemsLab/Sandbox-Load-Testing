@@ -1,3 +1,4 @@
 config.json
 json-results/
 logs/
+__pycache__
