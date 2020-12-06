@@ -12,6 +12,8 @@ The flow can be run all-in-one, or setup and teardown triggered independently to
 - Adjust config.json settings
 - Trigger run_sandboxes.py, stop_sandboxes.py, or run_full_flow.py
 -  stop_sandboxes.py, if triggered as entry point, will look for latest json log file to pull in target sandbox ids
+-  run_full_flow.bat can be triggered from windows scheduler 
+    - use "cmd" as program with arguments "/k <path_to_file>" (to keep terminal open during execution)
 
 Create 'config.json' in root of directory and add the following:
 
@@ -29,18 +31,18 @@ Create 'config.json' in root of directory and add the following:
     "blueprint_params": [],
     "sandbox_duration_minutes": 20,
     "sandbox_quantity": 5,
-    "orch_polling_minutes": 15,
+    "orch_polling_minutes": 10,
     "polling_frequency_seconds": 20,
-    "initial_timeout_minutes": 1
+    "initial_timeout_minutes": 1,
+    "teardown_timeout_minutes": 2
   }
 }
-
-
 ```
 
 - api data is used for connecting to Sandbox Rest Service
 - run config is the settings for the trial
-- If bluerpint has inputs, blueprint params are objects of the form {"name": "value"}
+- teardown timeout minutes is how long full flow script will wait after setup before tear down
+- If blueprint has inputs, blueprint params are objects of the form {"name": "value"}
 
 ```
 [
