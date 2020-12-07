@@ -10,7 +10,6 @@ from pathlib import Path
 
 
 def run_full_flow():
-    print("Starting FULL Flow")
     try:
         api_config, run_config = get_config_data()
     except Exception as e:
@@ -19,15 +18,18 @@ def run_full_flow():
 
     blueprint_name = run_config.blueprint_id
     time_stamp = get_utc_timestamp()
-
     current_dir = os.getcwd()
     logs_folder_path = os.path.join(current_dir, my_globals.LOGS_FOLDER, run_config.blueprint_id)
-    Path(logs_folder_path).mkdir(exist_ok=True, parents=True)
 
+    # CREATE LOG FOLDER
+    Path(logs_folder_path).mkdir(exist_ok=True, parents=True)
     log_name = "{}_{}.log".format(time_stamp, blueprint_name)
     log_file_path = os.path.join(logs_folder_path, log_name)
     logger = get_logger(log_file_path)
+    
+    logger.info("Starting FULL Flow")
 
+    # GET API SESSION
     try:
         sb_rest = SandboxRest(username=api_config.user,
                               password=api_config.password,
@@ -39,16 +41,20 @@ def run_full_flow():
         logger.exception(exc_msg)
         raise Exception(exc_msg)
 
+    # START SANDBOXES
     try:
         start_sandboxes(sb_rest, run_config, time_stamp, logger)
     except Exception as e:
-        print("Errors during setup Flow!")
+        logger.error("Errors during setup Flow!")
+        # TODO - A failed setup will throw exception, define specific exception for this scenario to "pass"
         pass
 
+    # LET SANDBOX BE ACTIVE FOR A BIT
     active_sandbox_minutes = run_config.active_sandbox_minutes
-    print("Sleeping {} minutes before teardown".format(active_sandbox_minutes))
+    logger.info("Sleeping {} minutes before teardown".format(active_sandbox_minutes))
     sleep(active_sandbox_minutes * 60)
 
+    # END SANDBOXES
     try:
         stop_sandboxes(sb_rest, run_config, time_stamp, logger)
     except Exception as e:
