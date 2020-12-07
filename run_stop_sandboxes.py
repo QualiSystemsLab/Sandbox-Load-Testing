@@ -66,7 +66,7 @@ def stop_sandboxes(sb_rest, run_config, logger):
     sandbox_count = len(sandbox_data_list)
 
     # STOP SANDBOXES
-    logger.info("Stopping {} Sandboxes...".format(sandbox_count))
+    logger.info("=== Stopping {} Sandboxes ===".format(sandbox_count))
     start = default_timer()
     for curr_sb_data in sandbox_data_list:
         try:
@@ -76,11 +76,16 @@ def stop_sandboxes(sb_rest, run_config, logger):
                                                                                            str(e))
             logger.info(exc_msg)
 
+    # LET TEARDOWN RUN A BIT
+    logger.info("Waiting {} minutes before polling teardown...".format(run_config.initial_timeout_minutes))
+    sleep(run_config.initial_timeout_minutes * 60)
+
     # POLL TEARDOWN
     finished_teardowns = []
     failed_teardowns = []
     total_polling_minutes = run_config.orch_polling_minutes
     t_end = time() + (60 * total_polling_minutes)
+    logger.info("Beginning polling for max of {} minutes".format(run_config.orch_polling_minutes))
     while time() < t_end:
         for curr_sb_id in list(sb_map.keys()):
             sb_data = sb_map[curr_sb_id]
@@ -103,6 +108,8 @@ def stop_sandboxes(sb_rest, run_config, logger):
                     failed_teardowns.append(curr_sb_id)
                     sb_data.teardown_errors = activity_feed_errors
                     logger.error("Failed teardown: {}".format(curr_sb_id))
+                else:
+                    logger.info("Completed Teardown: {}".format(curr_sb_id))
                 finished_teardowns.append(sb_data)
                 del sb_map[curr_sb_id]
         if not sb_map:

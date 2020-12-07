@@ -24,8 +24,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     sandbox_name = sandbox_name_truncater(sandbox_name)
 
     # START SANDBOXES
-    logger.info("Starting {} sandboxes. Polling for max {} minutes...".format(run_config.sandbox_quantity,
-                                                                              run_config.orch_polling_minutes))
+    logger.info("=== Starting {} sandboxes ===".format(run_config.sandbox_quantity))
     start = default_timer()
     started_sandboxes = []
     for i in range(run_config.sandbox_quantity):
@@ -38,6 +37,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
         started_sandboxes.append(sb_data)
 
     # LET SETUP RUN A BIT
+    logger.info("Waiting {} minutes before polling setup...".format(run_config.initial_timeout_minutes))
     sleep(run_config.initial_timeout_minutes * 60)
 
     # BUILD SANDBOX DATA MAP WITH ID AS KEY
@@ -65,6 +65,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
                 logger.error("Failed setup: {}, stage: {}".format(sb_id, sb_data.failed_setup_stage))
                 continue
             if state == my_globals.SANDBOX_READY_STATE:
+                logger.info("Sandbox {} Active".format(sb_id))
                 finished_setups.append(sb_data)
                 del sb_map[sb_id]
         if not sb_map:
