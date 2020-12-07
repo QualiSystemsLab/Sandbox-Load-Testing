@@ -72,28 +72,50 @@ def stop_sandboxes(sb_rest, run_config, logger):
         try:
             sb_rest.stop_sandbox(curr_sb_data.sandbox_id)
         except Exception as e:
-            exc_msg = "Can't end sandbox '{}'. Perhaps it is already completed: {}".format(curr_sb_data.sandbox_id,
-                                                                                           str(e))
-            logger.info(exc_msg)
+            exc_msg = "Can't end sandbox '{}'.Retrying. Exception {}".format(curr_sb_data.sandbox_id,
+                                                                    str(e))
+            logger.error(exc_msg)
+            sleep(5)
+            try:
+                sb_rest.stop_sandbox(curr_sb_data.sandbox_id)
+            except Exception as e:
+                exc_msg = "Can't end sandbox '{}'. Raising Exception {}".format(curr_sb_data.sandbox_id,
+                                                                                 str(e))
+                logger.exception(exc_msg)
+                raise Exception(exc_msg)
+        sleep(1)
 
     # LET TEARDOWN RUN A BIT
-    logger.info("Waiting {} minutes before polling teardown...".format(run_config.initial_timeout_minutes))
-    sleep(run_config.initial_timeout_minutes * 60)
+    logger.info("Waiting {} minutes before polling teardown...".format(run_config.estimated_teardown_minutes))
+    sleep(run_config.estimated_teardown_minutes * 60)
 
     # POLL TEARDOWN
     finished_teardowns = []
     failed_teardowns = []
-    total_polling_minutes = run_config.orch_polling_minutes
+    total_polling_minutes = run_config.max_polling_minutes
     t_end = time() + (60 * total_polling_minutes)
-    logger.info("Beginning polling for max of {} minutes".format(run_config.orch_polling_minutes))
+    logger.info("Beginning polling for max of {} minutes".format(total_polling_minutes))
     while time() < t_end:
         for curr_sb_id in list(sb_map.keys()):
             sb_data = sb_map[curr_sb_id]
-            sb_details = sb_rest.get_sandbox_data(curr_sb_id)
+            try:
+                sb_details = sb_rest.get_sandbox_data(curr_sb_id)
+            except Exception as e:
+                if "rate quota" in str(e):
+                    logger.error("api rate quota exceeded. Waiting and re-polling...")
+                    sleep(10)
+                    sb_details = sb_rest.get_sandbox_data(curr_sb_id)
+                else:
+                    exc_msg = "Issue during polling: {}".format(str(e))
+                    logger.exception(exc_msg)
+                    raise (exc_msg)
+
             state = sb_details["state"]
             if state == my_globals.SANDBOX_ENDED_STATE:
                 setup_errors = sb_data.setup_errors
                 if setup_errors:
+                    sleep(3)
+
                     # can search activity feed either by latest event id or "since" current timestamp
                     sorted_errors = sorted(setup_errors, key=lambda x: x["id"])
                     last_setup_error_id = sorted_errors.pop()["id"]
@@ -102,6 +124,7 @@ def stop_sandboxes(sb_rest, run_config, logger):
                                                                         error_only=True,
                                                                         from_event_id=last_setup_error_id + 1)
                 else:
+                    sleep(3)
                     activity_feed_errors = sb_rest.get_sandbox_activity(sandbox_id=curr_sb_id,
                                                                         error_only=True)
                 if activity_feed_errors:
@@ -112,6 +135,7 @@ def stop_sandboxes(sb_rest, run_config, logger):
                     logger.info("Completed Teardown: {}".format(curr_sb_id))
                 finished_teardowns.append(sb_data)
                 del sb_map[curr_sb_id]
+            sleep(2)  # add some buffer to the api requests
         if not sb_map:
             break
 
@@ -124,7 +148,8 @@ def stop_sandboxes(sb_rest, run_config, logger):
         raise Exception(exc_msg)
 
     elapsed = int(default_timer() - start)
-    logger.info("Sandboxes Done Tearing Down. Elapsed: '{}' seconds".format(elapsed))
+    elapsed = int(elapsed / 60)
+    logger.info("Sandboxes Done Tearing Down. Elapsed: '{}' minutes".format(elapsed))
 
     with open(latest_json_log_path, 'w') as f:
         sb_data_json = get_json_from_nested_obj(finished_teardowns)

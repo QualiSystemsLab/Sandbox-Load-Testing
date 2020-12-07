@@ -8,8 +8,8 @@ CONFIG_FILE_NAME = "config.json"
 
 ApiConfig = namedtuple("ApiConfig", ["host", "port", "user", "password", "domain"])
 RunConfig = namedtuple("RunConfig", ["blueprint_id", "blueprint_params", "sandbox_duration", "sandbox_quantity",
-                                     "orch_polling_minutes", "polling_frequency_seconds", "initial_timeout_minutes",
-                                     "teardown_timeout_minutes"])
+                                     "max_polling_minutes", "polling_frequency_seconds", "estimated_setup_minutes",
+                                     "estimated_teardown_minutes", "active_sandbox_minutes"])
 
 
 def get_utc_timestamp():
@@ -49,16 +49,17 @@ def get_config_data():
                            domain=api_data["domain"])
 
     sandbox_duration_minutes = run_data["sandbox_duration_minutes"]
-    sandbox_duration_iso = _get_iso_formatted_time_from_minutes(sandbox_duration_minutes)
+    sandbox_duration_iso_formatted = _get_iso_formatted_time_from_minutes(sandbox_duration_minutes)
 
     run_config = RunConfig(blueprint_id=run_data["blueprint_id"],
                            blueprint_params=run_data["blueprint_params"],
-                           sandbox_duration=sandbox_duration_iso,
+                           sandbox_duration=sandbox_duration_iso_formatted,
                            sandbox_quantity=run_data["sandbox_quantity"],
-                           orch_polling_minutes=run_data["orch_polling_minutes"],
+                           max_polling_minutes=run_data["max_polling_minutes"],
                            polling_frequency_seconds=run_data["polling_frequency_seconds"],
-                           initial_timeout_minutes=run_data["initial_timeout_minutes"],
-                           teardown_timeout_minutes=run_data["teardown_timeout_minutes"])
+                           estimated_setup_minutes=run_data["estimated_setup_minutes"],
+                           estimated_teardown_minutes=run_data["estimated_teardown_minutes"],
+                           active_sandbox_minutes=run_data["active_sandbox_minutes"])
     return api_config, run_config
 
 

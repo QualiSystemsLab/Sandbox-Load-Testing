@@ -32,13 +32,14 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
                                              sandbox_name=sandbox_name,
                                              duration=run_config.sandbox_duration,
                                              params=run_config.blueprint_params)
-        sb_id = sb_details["id"]
-        sb_data = SandboxErrorData(sb_id)
+        curr_sb_id = sb_details["id"]
+        sb_data = SandboxErrorData(curr_sb_id)
         started_sandboxes.append(sb_data)
+        sleep(1)
 
     # LET SETUP RUN A BIT
-    logger.info("Waiting {} minutes before polling setup...".format(run_config.initial_timeout_minutes))
-    sleep(run_config.initial_timeout_minutes * 60)
+    logger.info("Waiting {} minutes before polling setup...".format(run_config.estimated_setup_minutes))
+    sleep(run_config.estimated_setup_minutes * 60)
 
     # BUILD SANDBOX DATA MAP WITH ID AS KEY
     # REMOVE ITEM FROM MAP WHEN SETUP FINISHES
@@ -49,25 +50,39 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     # POLL THE SETUP
     finished_setups = []
     failed_setups = []
-    total_polling_minutes = run_config.orch_polling_minutes
+    total_polling_minutes = run_config.max_polling_minutes
     t_end = time() + (60 * total_polling_minutes)
     while time() < t_end:
-        for sb_id, sb_data in list(sb_map.items()):
-            sb_details = sb_rest.get_sandbox_data(sb_id)
+        for curr_sb_id, sb_data in list(sb_map.items()):
+            try:
+                sb_details = sb_rest.get_sandbox_data(curr_sb_id)
+            except Exception as e:
+                if "rate quota" in str(e):
+                    logger.error("api rate quota exceeded. Waiting a minute and re-polling...")
+                    sleep(60)
+                    sb_details = sb_rest.get_sandbox_data(curr_sb_id)
+                else:
+                    exc_msg = "Issue during polling: {}".format(str(e))
+                    logger.exception(exc_msg)
+                    raise (exc_msg)
+
             state = sb_details["state"]
             if state == my_globals.SANDBOX_ERROR_STATE:
+                sleep(3)
                 sb_data.failed_setup_stage = sb_details["setup_stage"]
-                activity_feed_errors = sb_rest.get_sandbox_activity(sb_id, True)
+                activity_feed_errors = sb_rest.get_sandbox_activity(curr_sb_id, True)
                 sb_data.setup_errors = activity_feed_errors
                 finished_setups.append(sb_data)
-                failed_setups.append(sb_id)
-                del sb_map[sb_id]
-                logger.error("Failed setup: {}, stage: {}".format(sb_id, sb_data.failed_setup_stage))
+                failed_setups.append(curr_sb_id)
+                del sb_map[curr_sb_id]
+                logger.error("Failed setup: {}, stage: {}".format(curr_sb_id, sb_data.failed_setup_stage))
                 continue
             if state == my_globals.SANDBOX_READY_STATE:
-                logger.info("Sandbox {} Active".format(sb_id))
+                logger.info("Sandbox {} Active".format(curr_sb_id))
                 finished_setups.append(sb_data)
-                del sb_map[sb_id]
+                del sb_map[curr_sb_id]
+            sleep(2)  # add some buffer to the api requests
+
         if not sb_map:
             break
 
@@ -80,7 +95,8 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
         raise Exception(exc_msg)
 
     elapsed = int(default_timer() - start)
-    logger.info("Sandboxes Done. Elapsed: '{}' seconds".format(elapsed))
+    elapsed = int(elapsed / 60)
+    logger.info("Sandboxes Done. Elapsed: '{}' minutes".format(elapsed))
 
     # STORE SETUP DATA TO JSON FILE
     current_dir = os.getcwd()

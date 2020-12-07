@@ -45,10 +45,16 @@ def run_full_flow():
         print("Errors during setup Flow!")
         pass
 
-    teardown_timeout_seconds = run_config.teardown_timeout_minutes * 60
-    print("Sleeping {} seconds before teardown".format(teardown_timeout_seconds))
-    sleep(teardown_timeout_seconds)
-    stop_sandboxes(sb_rest, run_config, logger)
+    active_sandbox_minutes = run_config.active_sandbox_minutes
+    print("Sleeping {} minutes before teardown".format(active_sandbox_minutes))
+    sleep(active_sandbox_minutes * 60)
+
+    try:
+        stop_sandboxes(sb_rest, run_config, logger)
+    except Exception as e:
+        exc_msg = "Error during teardown flow: {}".format(str(e))
+        logger.exception(exc_msg)
+        raise Exception(exc_msg)
 
 
 if __name__ == "__main__":
