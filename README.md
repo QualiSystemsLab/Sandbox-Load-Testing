@@ -14,6 +14,8 @@ The flow can be run all-in-one, or setup and teardown triggered independently to
 -  stop_sandboxes.py, if triggered as entry point, will look for latest json log file to pull in target sandbox ids
 -  run_full_flow.bat can be triggered from windows scheduler 
     - use "cmd" as program with arguments "/k <path_to_file>" (to keep terminal open during execution)
+    - PRO-TIP - Disable "Quick-Edit" mode in cmd defaults so script doesn't randomly hang. 
+    See [here](https://superuser.com/questions/312132/command-prompt-hangs-until-keypress).
 
 Create 'config.json' in root of directory and add the following:
 

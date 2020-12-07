@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 
 
-def _get_latest_log_path(blueprint_id, root_folder, file_type="log"):
+def _get_latest_json_log_timestamp(blueprint_id):
     """
     find latest dated log in results folder
     sample results file name - <time_stamp>_<blueprint_name>.<filetype>
@@ -17,24 +17,35 @@ def _get_latest_log_path(blueprint_id, root_folder, file_type="log"):
     :return:
     """
     current_dir = os.getcwd()
-    log_folder_path = os.path.join(current_dir, root_folder, blueprint_id)
+    log_folder_path = os.path.join(current_dir, my_globals.JSON_RESULTS_FOLDER, blueprint_id)
     log_files = os.listdir(log_folder_path)
     time_stamp_strings = ["_".join(x.split("_")[:-1]) for x in log_files]
     datetime_time_stamps = [datetime.strptime(ts, my_globals.TIMESTAMP_FORMATTING) for ts in time_stamp_strings]
     datetime_time_stamps.sort()
     latest_timestamp = datetime_time_stamps.pop()
     latest_timestamp_str = datetime.strftime(latest_timestamp, my_globals.TIMESTAMP_FORMATTING)
-    log_file_name = "{}_{}.{}".format(latest_timestamp_str, blueprint_id, file_type)
+    return latest_timestamp_str
+
+
+def build_log_path(time_stamp, blueprint_id, is_json_log=False):
+    """
+    find latest dated log in results folder
+    sample results file name - <time_stamp>_<blueprint_name>.<filetype>
+    :param str blueprint_id: refers to folder inside json-results
+    :return:
+    """
+    if is_json_log:
+        folder_name = my_globals.JSON_RESULTS_FOLDER
+        file_type = "json"
+    else:
+        folder_name = my_globals.LOGS_FOLDER
+        file_type = "log"
+
+    current_dir = os.getcwd()
+    log_folder_path = os.path.join(current_dir, folder_name, blueprint_id)
+    log_file_name = "{}_{}.{}".format(time_stamp, blueprint_id, file_type)
     log_file_path = os.path.join(log_folder_path, log_file_name)
     return log_file_path
-
-
-def get_latest_log_path(blueprint_id):
-    return _get_latest_log_path(blueprint_id, my_globals.LOGS_FOLDER)
-
-
-def get_latest_json_log_path(blueprint_id):
-    return _get_latest_log_path(blueprint_id, my_globals.JSON_RESULTS_FOLDER, "json")
 
 
 def _get_sandbox_data_from_json(path):
@@ -47,17 +58,18 @@ def _get_sandbox_data_from_json(path):
     return obj_wrapped_data
 
 
-def stop_sandboxes(sb_rest, run_config, logger):
+def stop_sandboxes(sb_rest, run_config, time_stamp, logger):
     """
     :param SandboxRest sb_rest:
     :param RunConfig run_config:
+    :param str time_stamp:
     :param logging.Logger logger:
     :return:
     """
-    latest_json_log_path = get_latest_json_log_path(run_config.blueprint_id)
-    sandbox_data_list = _get_sandbox_data_from_json(latest_json_log_path)
+    json_file_path = build_log_path(time_stamp, run_config.blueprint_id, is_json_log=True)
+    sandbox_data_list = _get_sandbox_data_from_json(json_file_path)
 
-    # BUILD SANDBOX DATA MAP WITH ID AS KEY
+    # BUILD SANDBOX DATA MAP WITH SANDBOX ID AS KEY
     # REMOVE ITEM FROM MAP WHEN SETUP FINISHES
     sb_map = {}
     for sb_data in sandbox_data_list:
@@ -151,11 +163,11 @@ def stop_sandboxes(sb_rest, run_config, logger):
     elapsed = int(elapsed / 60)
     logger.info("Sandboxes Done Tearing Down. Elapsed: '{}' minutes".format(elapsed))
 
-    with open(latest_json_log_path, 'w') as f:
+    with open(json_file_path, 'w') as f:
         sb_data_json = get_json_from_nested_obj(finished_teardowns)
         f.write(sb_data_json)
 
-    logger.info("JSON data file written: '{}'".format(latest_json_log_path))
+    logger.info("JSON data file written: '{}'".format(json_file_path))
 
     # VALIDATE RESULTS
     if failed_teardowns:
@@ -168,13 +180,18 @@ def stop_sandboxes(sb_rest, run_config, logger):
 
 
 if __name__ == "__main__":
+    """
+    When Triggering stop independently, latest timestamp is used, unless you provide override
+    """
     try:
         api_config, run_config = get_config_data()
     except Exception as e:
         exc_msg = "Make sure config.json file is present. See ReadME for sample. Exception: {}".format(str(e))
         raise Exception(exc_msg)
-    latest_log_path = get_latest_log_path(run_config.blueprint_id)
-    logger = get_logger(latest_log_path)
+
+    latest_json_time_stamp = _get_latest_json_log_timestamp(run_config.blueprint_id)
+    log_path = build_log_path(latest_json_time_stamp, run_config.blueprint_id)
+    logger = get_logger(log_path)
     try:
         sb_rest = SandboxRest(username=api_config.user,
                               password=api_config.password,
@@ -187,4 +204,4 @@ if __name__ == "__main__":
         logger.exception(exc_msg)
         raise Exception(exc_msg)
 
-    stop_sandboxes(sb_rest, run_config, logger)
+    stop_sandboxes(sb_rest, run_config, latest_json_time_stamp, logger)

@@ -50,7 +50,7 @@ def run_full_flow():
     sleep(active_sandbox_minutes * 60)
 
     try:
-        stop_sandboxes(sb_rest, run_config, logger)
+        stop_sandboxes(sb_rest, run_config, time_stamp, logger)
     except Exception as e:
         exc_msg = "Error during teardown flow: {}".format(str(e))
         logger.exception(exc_msg)
