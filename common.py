@@ -12,6 +12,11 @@ RunConfig = namedtuple("RunConfig", ["blueprint_id", "blueprint_params", "sandbo
                                      "estimated_teardown_minutes", "active_sandbox_minutes"])
 
 
+class ActiveWithErrorException(Exception):
+    """ If a polled child sandbox is active with error """
+    pass
+
+
 def get_utc_timestamp():
     return datetime.utcnow().strftime(TIMESTAMP_FORMATTING)
 

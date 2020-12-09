@@ -3,7 +3,7 @@ from timeit import default_timer
 from time import time, sleep
 import json
 from common import SandboxErrorData, get_config_data, get_utc_timestamp, sandbox_name_truncater, \
-    get_json_from_nested_obj, RunConfig
+    get_json_from_nested_obj, RunConfig, ActiveWithErrorException
 from logger import get_logger
 import my_globals
 import os
@@ -116,7 +116,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
         failed_count = len(failed_setups)
         err_msg = "=== {} failed setups ===\n{}".format(failed_count, json.dumps(failed_setups, indent=4))
         logger.error(err_msg)
-        raise Exception("{} Failed Setups!".format(failed_count))
+        raise ActiveWithErrorException("{} Failed Setups!".format(failed_count))
 
     logger.info("Setup flow done with no errors")
 

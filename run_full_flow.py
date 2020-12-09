@@ -1,5 +1,5 @@
 import os
-from common import get_config_data, get_utc_timestamp
+from common import get_config_data, get_utc_timestamp, ActiveWithErrorException
 from run_start_sandboxes import start_sandboxes
 from run_stop_sandboxes import stop_sandboxes
 from time import sleep
@@ -26,7 +26,7 @@ def run_full_flow():
     log_name = "{}_{}.log".format(time_stamp, blueprint_name)
     log_file_path = os.path.join(logs_folder_path, log_name)
     logger = get_logger(log_file_path)
-    
+
     logger.info("Starting FULL Flow")
 
     # GET API SESSION
@@ -44,10 +44,13 @@ def run_full_flow():
     # START SANDBOXES
     try:
         start_sandboxes(sb_rest, run_config, time_stamp, logger)
+    except ActiveWithErrorException as e:
+        exc_msg = "Sandboxes are active with Error: {}".format(str(e))
+        logger.error(exc_msg)
     except Exception as e:
-        logger.error("Errors during setup Flow!")
-        # TODO - A failed setup will throw exception, define specific exception for this scenario to "pass"
-        pass
+        exc_msg = "Unexpected exception during setup flow: {}".format(str(e))
+        logger.exception(exc_msg)
+        raise Exception(exc_msg)
 
     # LET SANDBOX BE ACTIVE FOR A BIT
     active_sandbox_minutes = run_config.active_sandbox_minutes
