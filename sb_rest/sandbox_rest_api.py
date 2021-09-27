@@ -7,7 +7,7 @@ import json
 
 
 class SandboxRest(object):
-    def __init__(self, username, password, server, port="82", domain="Global", api_version="v2", logger=None):
+    def __init__(self, server, username, password, domain="Global", token="", port="82", api_version="v2", logger=None):
         """
         run login command on init, attach session token to headers for subsequent requests
         :param str server:
@@ -216,14 +216,35 @@ class SandboxRest(object):
         data = self._handle_res_json(response)
         return data
 
+    def get_console_output(self, sandbox_id: str, tail=0):
+        """
+        get console entries from sandbox
+        get back list of entries. list of dicts
+        [{"id":"asdf", "time": "12:00", "text": "bla, bla, bla"}, ...]
+        """
+        url = f"{self._base_url}/sandboxes/{sandbox_id}/output"
+
+        # append query param if set
+        if tail:
+            url += f"?tail={tail}"
+
+        response = requests.get(url=url, headers=self._auth_headers)
+        data = self._handle_res_json(response)
+        entries = data.get("entries")
+        if not entries:
+            raise Exception("API Response has no 'entries'. Response: ".format(data))
+        return entries
+
 
 if __name__ == "__main__":
     server = "localhost"
     cs_user = "admin"
     password = "admin"
     domain = "Global"
+    SANDBOX_ID = "2b3c062b-f274-492d-b6d0-276c2d49a546"
 
-    sb_rest = SandboxRest(server, cs_user, password, domain)
+    sb_rest = SandboxRest("localhost", "admin", "admin")
+    entries = sb_rest.get_console_output(SANDBOX_ID)
     sandbox_info = sb_rest.get_sandboxes()
     info_json = json.dumps(sandbox_info, indent=2)
     print(info_json)

@@ -30,7 +30,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     for i in range(run_config.sandbox_quantity):
         sb_details = sb_rest.start_blueprint(blueprint_id=run_config.blueprint_id,
                                              sandbox_name=sandbox_name,
-                                             duration=run_config.sandbox_duration,
+                                             duration=run_config.sandbox_duration_iso_formatted,
                                              params=run_config.blueprint_params)
         curr_sb_id = sb_details["id"]
         sb_data = SandboxErrorData(curr_sb_id)
@@ -50,7 +50,7 @@ def start_sandboxes(sb_rest, run_config, time_stamp, logger):
     # POLL THE SETUP
     finished_setups = []
     failed_setups = []
-    total_polling_minutes = run_config.max_polling_minutes
+    total_polling_minutes = run_config.setup_polling_timeout
     t_end = time() + (60 * total_polling_minutes)
     while time() < t_end:
         for curr_sb_id, sb_data in list(sb_map.items()):

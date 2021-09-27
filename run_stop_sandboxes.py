@@ -85,14 +85,14 @@ def stop_sandboxes(sb_rest, run_config, time_stamp, logger):
             sb_rest.stop_sandbox(curr_sb_data.sandbox_id)
         except Exception as e:
             exc_msg = "Can't end sandbox '{}'.Retrying. Exception {}".format(curr_sb_data.sandbox_id,
-                                                                    str(e))
+                                                                             str(e))
             logger.error(exc_msg)
             sleep(5)
             try:
                 sb_rest.stop_sandbox(curr_sb_data.sandbox_id)
             except Exception as e:
                 exc_msg = "Can't end sandbox '{}'. Raising Exception {}".format(curr_sb_data.sandbox_id,
-                                                                                 str(e))
+                                                                                str(e))
                 logger.exception(exc_msg)
                 raise Exception(exc_msg)
         sleep(1)
@@ -104,7 +104,7 @@ def stop_sandboxes(sb_rest, run_config, time_stamp, logger):
     # POLL TEARDOWN
     finished_teardowns = []
     failed_teardowns = []
-    total_polling_minutes = run_config.max_polling_minutes
+    total_polling_minutes = run_config.teardown_polling_timeout
     t_end = time() + (60 * total_polling_minutes)
     logger.info("Beginning polling for max of {} minutes".format(total_polling_minutes))
     while time() < t_end:

@@ -1,15 +1,33 @@
 import json
 import os
-from collections import OrderedDict, namedtuple
+import typing
+from collections import OrderedDict
 from datetime import datetime
+
 from my_globals import TIMESTAMP_FORMATTING
 
 CONFIG_FILE_NAME = "config.json"
 
-ApiConfig = namedtuple("ApiConfig", ["host", "port", "user", "password", "domain"])
-RunConfig = namedtuple("RunConfig", ["blueprint_id", "blueprint_params", "sandbox_duration", "sandbox_quantity",
-                                     "max_polling_minutes", "polling_frequency_seconds", "estimated_setup_minutes",
-                                     "estimated_teardown_minutes", "active_sandbox_minutes"])
+
+class ApiConfig(typing.NamedTuple):
+    host: str
+    port: int
+    user: str
+    password: str
+    domain: str
+
+
+class RunConfig(typing.NamedTuple):
+    blueprint_id: str
+    sandbox_quantity: int
+    sandbox_duration_iso_formatted: str
+    active_sandbox_minutes: int
+    blueprint_params: dict
+    setup_polling_timeout: int
+    teardown_polling_timeout: int
+    estimated_setup_minutes: int
+    estimated_teardown_minutes: int
+    polling_frequency_seconds: int
 
 
 class ActiveWithErrorException(Exception):
@@ -34,7 +52,7 @@ def _get_iso_formatted_time_from_minutes(minutes):
     return "PT0H{}M".format(minutes)
 
 
-def get_config_data():
+def get_config_data() -> typing.Tuple[ApiConfig, RunConfig]:
     """
     read json file return tuple of config data objects
     :return:
@@ -55,16 +73,16 @@ def get_config_data():
 
     sandbox_duration_minutes = run_data["sandbox_duration_minutes"]
     sandbox_duration_iso_formatted = _get_iso_formatted_time_from_minutes(sandbox_duration_minutes)
-
     run_config = RunConfig(blueprint_id=run_data["blueprint_id"],
-                           blueprint_params=run_data["blueprint_params"],
-                           sandbox_duration=sandbox_duration_iso_formatted,
                            sandbox_quantity=run_data["sandbox_quantity"],
-                           max_polling_minutes=run_data["max_polling_minutes"],
-                           polling_frequency_seconds=run_data["polling_frequency_seconds"],
+                           sandbox_duration_iso_formatted=sandbox_duration_iso_formatted,
+                           active_sandbox_minutes=run_data["active_sandbox_minutes"],
+                           setup_polling_timeout=run_data["setup_polling_timeout"],
+                           teardown_polling_timeout=run_data["teardown_polling_timeout"],
+                           blueprint_params=run_data["blueprint_params"],
                            estimated_setup_minutes=run_data["estimated_setup_minutes"],
                            estimated_teardown_minutes=run_data["estimated_teardown_minutes"],
-                           active_sandbox_minutes=run_data["active_sandbox_minutes"])
+                           polling_frequency_seconds=run_data["polling_frequency_seconds"])
     return api_config, run_config
 
 
@@ -92,11 +110,8 @@ class SandboxErrorData(object):
         return json.dumps(my_dict, indent=4)
 
 
-def sandbox_name_truncater(input_str):
-    """
-    :param int max_characters:
-    :return:
-    """
+def sandbox_name_truncater(input_str: str):
+    """ keep sandbox name under 60 chars """
     sandbox_max_characters = 60
     max_minus_ellipses = sandbox_max_characters - 2
     if len(input_str) > sandbox_max_characters:

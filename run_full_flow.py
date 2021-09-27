@@ -53,9 +53,10 @@ def run_full_flow():
         raise Exception(exc_msg)
 
     # LET SANDBOX BE ACTIVE FOR A BIT
-    active_sandbox_minutes = run_config.active_sandbox_minutes
-    logger.info("Sleeping {} minutes before teardown".format(active_sandbox_minutes))
-    sleep(active_sandbox_minutes * 60)
+    # active_sandbox_minutes = run_config.active_sandbox_minutes
+    # logger.info("Sleeping {} minutes before teardown".format(active_sandbox_minutes))
+    # sleep(active_sandbox_minutes * 60)
+    input("\n===== Sandboxes are active. Press enter to start teardowns =====\n")
 
     # END SANDBOXES
     try:
